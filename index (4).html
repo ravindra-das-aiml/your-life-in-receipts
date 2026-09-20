@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Life, In Receipts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFFDF8;
+    --surface:#FFFFFF;
+    --surface-2:#F6F1FF;
+    --paper:#FFFFFF;
+    --ink:#221C36;
+    --ink-dim:#786F92;
+    --gold:#F2A93B;
+    --teal:#14B8A6;
+    --rose:#EC4899;
+    --purple:#8B5CF6;
+    --blue:#3B82F6;
+    --green:#22C55E;
+    --line: rgba(34,28,54,0.10);
+    --shadow: 0 4px 18px rgba(34,28,54,0.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;cursor:none;}
+  h1,h2,h3{font-family:'Newsreader',serif;font-weight:500;margin:0;}
+  .mono{font-family:'Space Mono',monospace;}
+  ::selection{background:var(--gold);color:#221C36;}
+  a{color:inherit;}
+  @media (hover:none){ body{cursor:auto;} }
+
+  /* ---- custom cursor bubble ---- */
+  #cursorGlow{
+    position:fixed;top:0;left:0;width:38px;height:38px;border-radius:50%;
+    pointer-events:none;z-index:9999;mix-blend-mode:normal;
+    background:conic-gradient(from 0deg, #F2A93B, #EC4899, #8B5CF6, #3B82F6, #14B8A6, #F2A93B);
+    filter:blur(1px);
+    box-shadow:0 0 24px rgba(139,92,246,0.35), 0 0 46px rgba(236,72,153,0.22);
+    transform:translate(-50%,-50%) scale(1);
+    transition:width .18s ease, height .18s ease, opacity .2s ease;
+    animation:spinGlow 4s linear infinite;
+    opacity:0;
+  }
+  #cursorGlow.show{opacity:1;}
+  #cursorGlow::after{
+    content:'';position:absolute;inset:5px;border-radius:50%;background:var(--bg);
+  }
+  @keyframes spinGlow{ to{ transform:translate(-50%,-50%) rotate(360deg); } }
+  .bubble-particle{
+    position:fixed;top:0;left:0;border-radius:50%;pointer-events:none;z-index:9998;
+    opacity:0.75;
+  }
+  @keyframes floatFade{
+    0%{ transform:translate(-50%,-50%) scale(1); opacity:0.7; }
+    100%{ transform:translate(-50%,-50%) translateY(-38px) scale(0.2); opacity:0; }
+  }
+
+  /* Layout */
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px;}
+  header.top{position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);background:rgba(255,253,248,0.85);border-bottom:1px solid var(--line);}
+  nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:'Newsreader',serif;font-size:19px;letter-spacing:0.2px;}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--purple));}
+  .tabs{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:4px;}
+  .tab{padding:8px 16px;border-radius:999px;font-size:13.5px;cursor:none;color:var(--ink-dim);transition:all .2s;white-space:nowrap;border:none;background:transparent;font-family:inherit;}
+  .tab.active{background:linear-gradient(135deg,var(--gold),var(--rose));color:#fff;}
+  .tab:hover:not(.active){color:var(--ink);}
+
+  /* Hero */
+  .hero{padding:74px 0 56px;border-bottom:1px solid var(--line);}
+  .hero .eyebrow{font-family:'Space Mono',monospace;font-size:12.5px;color:var(--rose);margin-bottom:18px;font-weight:700;}
+  .hero h1{font-size:clamp(34px,6vw,64px);line-height:1.04;max-width:820px;letter-spacing:-0.01em;}
+  .hero p{max-width:520px;color:var(--ink-dim);font-size:16.5px;line-height:1.6;margin-top:20px;}
+  .hero-stats{display:flex;gap:36px;margin-top:38px;flex-wrap:wrap;}
+  .stat b{font-family:'Newsreader',serif;font-size:30px;display:block;background:linear-gradient(135deg,var(--purple),var(--rose));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .stat span{font-size:12.5px;color:var(--ink-dim);}
+
+  .view{display:none;padding:44px 0 90px;}
+  .view.active{display:block;}
+
+  /* Explore */
+  .controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px;align-items:center;}
+  .search-box{flex:1;min-width:220px;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow);}
+  .search-box input{background:transparent;border:none;outline:none;color:var(--ink);font-family:'Inter';font-size:14px;width:100%;cursor:none;}
+  .search-box input::placeholder{color:var(--ink-dim);}
+  .chip{padding:8px 14px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink-dim);font-size:13px;cursor:none;transition:all .15s;}
+  .chip.active{background:var(--c);color:#fff;border-color:var(--c);}
+  .chip:hover{color:var(--ink);}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;}
+  .card{background:var(--paper);color:#241C10;border-radius:12px;padding:18px 18px 16px;position:relative;cursor:none;transition:transform .18s ease, box-shadow .18s ease;font-family:'Space Mono',monospace;border:1.5px solid var(--line);box-shadow:var(--shadow);overflow:hidden;}
+  .card:hover{transform:translateY(-4px);box-shadow:0 10px 26px rgba(34,28,54,0.12);}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--type-color,var(--gold));}
+  .card .type{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--type-color,var(--gold));font-weight:700;margin-bottom:10px;}
+  .card .title{font-size:14.5px;font-weight:700;line-height:1.35;margin-bottom:6px;}
+  .card .sub{font-size:12px;opacity:.65;line-height:1.5;margin-bottom:14px;}
+  .card .foot{display:flex;justify-content:space-between;align-items:center;font-size:11px;opacity:.6;border-top:1px dashed rgba(0,0,0,0.14);padding-top:10px;}
+  .card .amt{font-weight:700;color:var(--rose);}
+
+  /* Chapters */
+  .chapter{border:1.5px solid var(--line);border-radius:14px;padding:0;margin-bottom:18px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow);}
+  .chapter-head{padding:22px 26px;cursor:none;display:flex;justify-content:space-between;align-items:center;gap:16px;}
+  .chapter-head:hover{background:var(--surface-2);}
+  .chapter-head h3{font-size:22px;color:var(--ink);}
+  .chapter-head .meta{font-size:12.5px;color:var(--ink-dim);margin-top:6px;font-family:'Space Mono',monospace;}
+  .chapter-head .arrow{color:var(--rose);font-size:18px;transition:transform .25s;flex-shrink:0;}
+  .chapter.open .arrow{transform:rotate(180deg);}
+  .chapter-body{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+  .chapter.open .chapter-body{max-height:2000px;}
+  .chapter-inner{padding:6px 26px 26px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+  .chapter-inner .card{transform:none;}
+  .chapter-insight{margin:0 26px 22px;padding:14px 16px;background:linear-gradient(135deg,rgba(242,169,59,0.10),rgba(236,72,153,0.10));border:1px solid rgba(242,169,59,0.3);border-radius:8px;font-size:13.5px;color:#B0561F;font-style:italic;font-family:'Newsreader',serif;line-height:1.5;}
+
+  /* Graph */
+  .graph-wrap{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;}
+  @media (max-width:820px){.graph-wrap{grid-template-columns:1fr;}}
+  #graphSvg{width:100%;height:560px;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;box-shadow:var(--shadow);}
+  .graph-node{cursor:none;}
+  .graph-node circle{transition:all .2s;}
+  .graph-node text{font-family:'Space Mono',monospace;font-size:9px;fill:var(--ink-dim);pointer-events:none;}
+  .graph-edge{stroke:var(--line);stroke-width:1.4;transition:all .2s;}
+  .side-panel{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:20px;min-height:200px;box-shadow:var(--shadow);}
+  .side-panel h4{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-dim);margin-bottom:14px;}
+  .legend{display:flex;flex-direction:column;gap:8px;margin-top:18px;}
+  .legend-item{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink-dim);}
+  .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+  /* Insights */
+  .insight-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;}
+  .insight-card{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:24px;box-shadow:var(--shadow);}
+  .insight-card .big{font-family:'Newsreader',serif;font-size:32px;background:linear-gradient(135deg,var(--purple),var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:6px;}
+  .insight-card .label{font-size:12.5px;color:var(--ink-dim);}
+  .insight-card .detail{margin-top:14px;font-size:13px;color:var(--ink-dim);line-height:1.6;border-top:1px solid var(--line);padding-top:14px;}
+
+  footer{border-top:1px solid var(--line);padding:26px 0;text-align:center;color:var(--ink-dim);font-size:12.5px;font-family:'Space Mono',monospace;}
+
+  /* Modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(34,28,54,0.35);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .modal-bg.show{display:flex;}
+  .modal{background:#fff;color:#241C10;border-radius:14px;max-width:420px;width:100%;padding:26px;font-family:'Space Mono',monospace;position:relative;box-shadow:0 20px 60px rgba(34,28,54,0.25);}
+  .modal .close{position:absolute;top:14px;right:16px;cursor:none;opacity:.5;font-size:18px;}
+  .modal .type{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--rose);font-weight:700;margin-bottom:10px;}
+  .modal h3{font-family:'Space Mono',monospace;font-size:17px;margin-bottom:8px;line-height:1.4;}
+  .modal .sub{font-size:12.5px;opacity:.7;margin-bottom:16px;}
+  .modal .row{display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px dashed rgba(0,0,0,0.14);}
+  .modal .conn-title{margin-top:16px;font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:.5;}
+  .modal .conn-item{font-size:12.5px;padding:8px 0;border-top:1px dashed rgba(0,0,0,0.14);cursor:none;}
+  .modal .conn-item:hover{color:var(--rose);}
+
+  @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important;} #cursorGlow{display:none;} body{cursor:auto;}}
+</style>
+</head>
+<body>
+
+<div id="cursorGlow"></div>
+
+<header class="top">
+  <div class="wrap">
+    <nav>
+      <div class="brand"><span class="dot"></span>Life, In Receipts</div>
+      <div class="tabs">
+        <button class="tab active" data-view="explore">Explore</button>
+        <button class="tab" data-view="chapters">Chapters</button>
+        <button class="tab" data-view="graph">Connections</button>
+        <button class="tab" data-view="insights">Insights</button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="hero">
+    <div class="eyebrow mono">// nine months, hundreds of fragments</div>
+    <h1>Every purchase, song and place<br>was a sentence in a story<br>nobody was reading.</h1>
+    <p>This is a reconstruction of one person's digital life — built entirely from receipts. Explore the fragments, or let the connections find the story for you.</p>
+    <div class="hero-stats" id="heroStats"></div>
+  </section>
+
+  <!-- EXPLORE -->
+  <section class="view active" id="view-explore">
+    <div class="controls">
+      <div class="search-box">
+        <span class="mono" style="opacity:.5">⌕</span>
+        <input id="searchInput" placeholder="Search a song, place, note...">
+      </div>
+      <div id="typeChips" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="grid" id="exploreGrid"></div>
+  </section>
+
+  <!-- CHAPTERS -->
+  <section class="view" id="view-chapters">
+    <div id="chaptersList"></div>
+  </section>
+
+  <!-- GRAPH -->
+  <section class="view" id="view-graph">
+    <div class="graph-wrap">
+      <svg id="graphSvg" viewBox="0 0 800 560"></svg>
+      <div class="side-panel" id="sidePanel">
+        <h4>How to read this</h4>
+        <p style="font-size:13px;color:var(--ink-dim);line-height:1.6;">Each dot is one receipt. Lines connect moments that happened close together in time or share a place/tag. Click any dot to trace its story.</p>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSIGHTS -->
+  <section class="view" id="view-insights">
+    <div class="insight-grid" id="insightsGrid"></div>
+  </section>
+</div>
+
+<footer>built for WebRush — frontend-only, six hours, one dataset</footer>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+/* ================== DATASET ==================
+   Replace this array with the official hackathon dataset.
+   Keep the same field shape (id, type, date, title, sub, tags, loc, amt)
+   and everything below (clustering, graph, insights) keeps working.
+================================================= */
+const RECEIPTS = [
+  {id:1, type:"music", date:"2026-01-06", title:"Midnight — Still Woozy", sub:"Played 2:14 AM, on loop x7", tags:["late-night","alone"], loc:"Home"},
+  {id:2, type:"search", date:"2026-01-06", title:"\"why can't I sleep\"", sub:"2:31 AM", tags:["late-night","anxious"], loc:"Home"},
+  {id:3, type:"note", date:"2026-01-07", title:"\"Maybe I need a change of scene.\"", sub:"Notes app, untitled", tags:["reflective"], loc:"Home"},
+  {id:4, type:"search", date:"2026-01-19", title:"\"solo travel cheap february\"", sub:"11:42 PM", tags:["planning","travel"], loc:"Home"},
+  {id:5, type:"purchase", date:"2026-01-22", title:"Flight to Goa", sub:"IndiGo · ₹4,820", tags:["travel"], loc:"Home", amt:"₹4,820"},
+  {id:6, type:"message", date:"2026-01-22", title:"\"guess who's finally taking a trip\"", sub:"to Aarav", tags:["travel","excited"], loc:"Home"},
+  {id:7, type:"purchase", date:"2026-02-10", title:"Backpack, 40L", sub:"Decathlon · ₹2,199", tags:["travel"], loc:"Home", amt:"₹2,199"},
+  {id:8, type:"place", date:"2026-02-14", title:"Landed — Dabolim Airport", sub:"Goa", tags:["travel"], loc:"Goa"},
+  {id:9, type:"photo", date:"2026-02-14", title:"IMG_3391.HEIC", sub:"Beach shack, sunset, blurry", tags:["travel","joy"], loc:"Goa"},
+  {id:10, type:"music", date:"2026-02-14", title:"Sunburn — Anyasa", sub:"Played on beach, 6:48 PM", tags:["travel","joy"], loc:"Goa"},
+  {id:11, type:"purchase", date:"2026-02-15", title:"Beach shack lunch", sub:"Curlies · ₹640", tags:["travel"], loc:"Goa", amt:"₹640"},
+  {id:12, type:"event", date:"2026-02-15", title:"Met Priya at hostel", sub:"Added to contacts same day", tags:["travel","connection"], loc:"Goa"},
+  {id:13, type:"photo", date:"2026-02-15", title:"IMG_3402.HEIC", sub:"Two shadows on sand", tags:["travel","connection"], loc:"Goa"},
+  {id:14, type:"message", date:"2026-02-16", title:"\"come back to goa in march?\"", sub:"from Priya", tags:["connection"], loc:"Goa"},
+  {id:15, type:"music", date:"2026-02-16", title:"Bloom — Odesza", sub:"Shared with Priya", tags:["connection","joy"], loc:"Goa"},
+  {id:16, type:"note", date:"2026-02-18", title:"\"Don't want to go back to Mon-Fri.\"", sub:"Notes app", tags:["reflective"], loc:"Goa"},
+  {id:17, type:"place", date:"2026-02-19", title:"Landed — home city", sub:"", tags:["travel"], loc:"Home"},
+  {id:18, type:"search", date:"2026-02-20", title:"\"how to work remote from goa\"", sub:"9:15 AM", tags:["planning","reflective"], loc:"Home"},
+  {id:19, type:"purchase", date:"2026-03-01", title:"Standing desk", sub:"Amazon · ₹6,999", tags:["work"], loc:"Home", amt:"₹6,999"},
+  {id:20, type:"movie", date:"2026-03-03", title:"Everything Everywhere All at Once", sub:"Watched alone, 11 PM", tags:["late-night","reflective"], loc:"Home"},
+  {id:21, type:"message", date:"2026-03-04", title:"\"priya i think i'm actually doing it\"", sub:"to Priya", tags:["connection","planning"], loc:"Home"},
+  {id:22, type:"purchase", date:"2026-03-12", title:"One-way flight to Goa", sub:"IndiGo · ₹5,340", tags:["travel"], loc:"Home", amt:"₹5,340"},
+  {id:23, type:"note", date:"2026-03-12", title:"\"Told my manager today. Terrified.\"", sub:"Notes app", tags:["reflective"], loc:"Home"},
+  {id:24, type:"place", date:"2026-03-20", title:"Landed — Dabolim Airport", sub:"Goa, one-way", tags:["travel"], loc:"Goa"},
+  {id:25, type:"photo", date:"2026-03-20", title:"IMG_3810.HEIC", sub:"Keys to a rented room", tags:["travel","joy"], loc:"Goa"},
+  {id:26, type:"event", date:"2026-03-21", title:"First remote workday, new desk", sub:"", tags:["work","travel"], loc:"Goa"},
+  {id:27, type:"music", date:"2026-03-21", title:"Sunburn — Anyasa", sub:"Played again, 7:02 AM", tags:["travel","joy"], loc:"Goa"},
+  {id:28, type:"message", date:"2026-03-21", title:"\"i live here now\"", sub:"to Priya", tags:["connection","joy"], loc:"Goa"},
+  {id:29, type:"purchase", date:"2026-03-25", title:"Two coffees", sub:"Artjuna Cafe · ₹380", tags:["connection"], loc:"Goa", amt:"₹380"},
+  {id:30, type:"photo", date:"2026-03-25", title:"IMG_3861.HEIC", sub:"Two shadows, longer now", tags:["connection","joy"], loc:"Goa"},
+];
+
+const TYPE_META = {
+  music:   {label:"Music",    color:"#F2A93B"},
+  movie:   {label:"Movie",    color:"#8B5CF6"},
+  place:   {label:"Place",    color:"#14B8A6"},
+  purchase:{label:"Purchase", color:"#EC4899"},
+  photo:   {label:"Photo",    color:"#3B82F6"},
+  message: {label:"Message",  color:"#22C55E"},
+  search:  {label:"Search",   color:"#D97706"},
+  event:   {label:"Event",    color:"#F97316"},
+  note:    {label:"Note",     color:"#6366F1"},
+};
+
+let state = { search:"", activeTypes:new Set(Object.keys(TYPE_META)), highlightId:null };
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const daysBetween = (a,b) => Math.abs((new Date(a) - new Date(b)) / 86400000);
+function fmtDate(d){ return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+
+/* ---------- HERO STATS ---------- */
+function renderHeroStats(){
+  const days = daysBetween(RECEIPTS[0].date, RECEIPTS[RECEIPTS.length-1].date);
+  const places = new Set(RECEIPTS.map(r=>r.loc)).size;
+  $('#heroStats').innerHTML = `
+    <div class="stat"><b>${RECEIPTS.length}</b><span>receipts</span></div>
+    <div class="stat"><b>${Math.round(days)}</b><span>days spanned</span></div>
+    <div class="stat"><b>${places}</b><span>places</span></div>
+    <div class="stat"><b>${Object.keys(TYPE_META).length}</b><span>moment types</span></div>
+  `;
+}
+
+/* ---------- EXPLORE VIEW ---------- */
+function renderChips(){
+  const wrap = $('#typeChips');
+  wrap.innerHTML = Object.entries(TYPE_META).map(([k,v])=>
+    `<button class="chip active" data-type="${k}" style="--c:${v.color}">${v.label}</button>`
+  ).join('');
+  wrap.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      const t = chip.dataset.type;
+      if(state.activeTypes.has(t)){ state.activeTypes.delete(t); chip.classList.remove('active'); }
+      else { state.activeTypes.add(t); chip.classList.add('active'); }
+      renderExplore();
+    });
+  });
+}
+
+function receiptCard(r, small){
+  const meta = TYPE_META[r.type];
+  return `<div class="card" style="--type-color:${meta.color}" data-id="${r.id}">
+    <div class="type">${meta.label} · ${fmtDate(r.date)}</div>
+    <div class="title">${r.title}</div>
+    <div class="sub">${r.sub || ''}</div>
+    <div class="foot"><span>${r.loc}</span>${r.amt ? `<span class="amt">${r.amt}</span>`:'<span>•</span>'}</div>
+  </div>`;
+}
+
+function renderExplore(){
+  const q = state.search.toLowerCase();
+  const filtered = RECEIPTS.filter(r=>
+    state.activeTypes.has(r.type) &&
+    (r.title.toLowerCase().includes(q) || r.sub.toLowerCase().includes(q) || r.loc.toLowerCase().includes(q) || r.tags.join(' ').includes(q))
+  ).sort((a,b)=> new Date(a.date)-new Date(b.date));
+  $('#exploreGrid').innerHTML = filtered.map(r=>receiptCard(r)).join('') || `<p style="color:var(--ink-dim)">Nothing matches. Try a different search.</p>`;
+  attachCardClicks('#exploreGrid');
+}
+
+/* ---------- CHAPTERS (clustering) ---------- */
+function buildChapters(){
+  const sorted = [...RECEIPTS].sort((a,b)=> new Date(a.date)-new Date(b.date));
+  const clusters = [];
+  let current = [sorted[0]];
+  for(let i=1;i<sorted.length;i++){
+    if(daysBetween(sorted[i].date, current[current.length-1].date) <= 3){
+      current.push(sorted[i]);
+    } else {
+      clusters.push(current);
+      current = [sorted[i]];
+    }
+  }
+  clusters.push(current);
+  return clusters.filter(c=>c.length>=1);
+}
+
+function chapterTitle(cluster){
+  const types = new Set(cluster.map(r=>r.type));
+  const locs = new Set(cluster.map(r=>r.loc));
+  const tags = cluster.flatMap(r=>r.tags);
+  const tagCount = {}; tags.forEach(t=>tagCount[t]=(tagCount[t]||0)+1);
+  const topTag = Object.entries(tagCount).sort((a,b)=>b[1]-a[1])[0]?.[0];
+  if(locs.has('Goa') && types.has('place')) return "Landing Somewhere New";
+  if(topTag==='travel' && types.has('purchase')) return "Planning an Escape";
+  if(topTag==='connection') return "Someone New Enters the Story";
+  if(topTag==='late-night') return "A Sleepless Stretch";
+  if(topTag==='work') return "Trying to Make It Permanent";
+  return "A Quiet Cluster of Moments";
+}
+
+function chapterInsight(cluster){
+  const types = cluster.map(r=>r.type);
+  const tags = cluster.flatMap(r=>r.tags);
+  if(types.includes('place') && types.includes('photo') && types.includes('music'))
+    return "A place, a photo and a song all landed on the same day — this is what a memory looks like in receipt form.";
+  if(tags.includes('connection'))
+    return "Notice how the same two shadows in the photos keep showing up — this cluster is really about one relationship, not five separate events.";
+  if(tags.includes('late-night'))
+    return "Everything here happened after midnight. The pattern isn't the content — it's the hour.";
+  if(types.includes('purchase') && tags.includes('travel'))
+    return "Every purchase in this cluster points the same direction: away from here.";
+  return "Small, disconnected-looking moments — read together, they're one decision being made in slow motion.";
+}
+
+function renderChapters(){
+  const clusters = buildChapters();
+  $('#chaptersList').innerHTML = clusters.map((c,i)=>{
+    const start = fmtDate(c[0].date), end = fmtDate(c[c.length-1].date);
+    return `<div class="chapter" data-idx="${i}">
+      <div class="chapter-head">
+        <div>
+          <h3>${chapterTitle(c)}</h3>
+          <div class="meta">${start}${start!==end?' – '+end:''} · ${c.length} receipt${c.length>1?'s':''} · ${[...new Set(c.map(r=>r.loc))].join(', ')}</div>
+        </div>
+        <div class="arrow">⌄</div>
+      </div>
+      <div class="chapter-body">
+        <div class="chapter-insight">${chapterInsight(c)}</div>
+        <div class="chapter-inner">${c.map(r=>receiptCard(r)).join('')}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.chapter-head').forEach(head=>{
+    head.addEventListener('click',()=>head.parentElement.classList.toggle('open'));
+  });
+  attachCardClicks('#chaptersList');
+  if(clusters.length) document.querySelector('.chapter')?.classList.add('open');
+}
+
+/* ---------- GRAPH ---------- */
+function computeEdges(){
+  const edges = [];
+  for(let i=0;i<RECEIPTS.length;i++){
+    for(let j=i+1;j<RECEIPTS.length;j++){
+      const a=RECEIPTS[i], b=RECEIPTS[j];
+      const closeInTime = daysBetween(a.date,b.date) <= 1;
+      const sameLoc = a.loc===b.loc && closeInTime;
+      const sharedTag = a.tags.some(t=>b.tags.includes(t)) && daysBetween(a.date,b.date)<=5;
+      if(closeInTime || sameLoc || sharedTag){
+        edges.push({a:a.id,b:b.id, weight:(closeInTime?2:0)+(sameLoc?2:0)+(sharedTag?1:0)});
+      }
+    }
+  }
+  return edges;
+}
+
+function renderGraph(){
+  const svg = $('#graphSvg');
+  const W=800,H=560;
+  const sorted = [...RECEIPTS].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const minD = new Date(sorted[0].date), maxD = new Date(sorted[sorted.length-1].date);
+  const span = maxD-minD || 1;
+  const typeRows = Object.keys(TYPE_META);
+  const nodePos = {};
+  sorted.forEach((r)=>{
+    const x = 50 + ((new Date(r.date)-minD)/span) * (W-100);
+    const rowIdx = typeRows.indexOf(r.type);
+    const y = 55 + rowIdx * ((H-100)/typeRows.length) + ((r.id%2)*10);
+    nodePos[r.id] = {x,y};
+  });
+  const edges = computeEdges();
+  let svgHtml = '';
+  edges.forEach(e=>{
+    const p1=nodePos[e.a], p2=nodePos[e.b];
+    svgHtml += `<line class="graph-edge" data-a="${e.a}" data-b="${e.b}" x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke-width="${0.8+e.weight*0.4}"/>`;
+  });
+  sorted.forEach(r=>{
+    const p = nodePos[r.id];
+    const meta = TYPE_META[r.type];
+    svgHtml += `<g class="graph-node" data-id="${r.id}">
+      <circle cx="${p.x}" cy="${p.y}" r="7" fill="${meta.color}" fill-opacity="0.9" stroke="${meta.color}" stroke-width="1"/>
+    </g>`;
+  });
+  svg.innerHTML = svgHtml;
+  svg.querySelectorAll('.graph-node').forEach(node=>{
+    node.addEventListener('click',()=>{
+      const id = parseInt(node.dataset.id);
+      highlightGraph(id);
+      openModal(id);
+    });
+  });
+  $('#legend').innerHTML = Object.entries(TYPE_META).map(([k,v])=>
+    `<div class="legend-item"><span class="legend-dot" style="background:${v.color}"></span>${v.label}</div>`
+  ).join('');
+}
+
+function highlightGraph(id){
+  const svg = $('#graphSvg');
+  svg.querySelectorAll('.graph-edge').forEach(l=>{
+    const isConn = l.dataset.a==id || l.dataset.b==id;
+    l.style.stroke = isConn ? 'var(--rose)' : 'var(--line)';
+    l.style.strokeWidth = isConn ? 2 : 1;
+    l.style.opacity = isConn ? 1 : 0.3;
+  });
+  svg.querySelectorAll('.graph-node circle').forEach(c=>{
+    const nodeId = c.parentElement.dataset.id;
+    c.setAttribute('r', nodeId==id ? 10 : 6);
+  });
+}
+
+/* ---------- INSIGHTS ---------- */
+function renderInsights(){
+  const typeCounts = {};
+  RECEIPTS.forEach(r=>typeCounts[r.type]=(typeCounts[r.type]||0)+1);
+  const topType = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1])[0];
+
+  const tagCounts = {};
+  RECEIPTS.forEach(r=>r.tags.forEach(t=>tagCounts[t]=(tagCounts[t]||0)+1));
+  const topTag = Object.entries(tagCounts).sort((a,b)=>b[1]-a[1])[0];
+
+  const spend = RECEIPTS.filter(r=>r.amt).reduce((s,r)=>s+parseInt(r.amt.replace(/[^0-9]/g,'')),0);
+
+  const cards = [
+    {big: topTag[0], label:"the recurring thread", detail:`"${topTag[0]}" shows up across ${topTag[1]} separate receipts — more than any other tag. It's the closest thing this data has to a theme.`},
+    {big: `₹${spend.toLocaleString()}`, label:"total tracked spend", detail:`Almost all of it points the same direction — flights, a backpack, a desk. Money was the earliest sign of the decision, before any note admitted it out loud.`},
+    {big: topType[0], label:"most frequent moment type", detail:`${topType[1]} ${TYPE_META[topType[0]].label.toLowerCase()} receipts — the most common way this person left a trace.`},
+    {big: "Goa", label:"where the story turns", detail:`The same beach song plays twice — once as a tourist, once as someone who just moved. Same coordinates, different chapter.`},
+  ];
+  $('#insightsGrid').innerHTML = cards.map(c=>`
+    <div class="insight-card">
+      <div class="big">${c.big}</div>
+      <div class="label">${c.label}</div>
+      <div class="detail">${c.detail}</div>
+    </div>`).join('');
+}
+
+/* ---------- MODAL / CONNECTIONS ---------- */
+function findConnections(id){
+  const edges = computeEdges();
+  const connIds = edges.filter(e=>e.a===id||e.b===id).map(e=> e.a===id?e.b:e.a);
+  return [...new Set(connIds)].map(cid=>RECEIPTS.find(r=>r.id===cid)).slice(0,5);
+}
+
+function openModal(id){
+  const r = RECEIPTS.find(x=>x.id===id);
+  const meta = TYPE_META[r.type];
+  const conns = findConnections(id);
+  $('#modalContent').innerHTML = `
+    <span class="close" id="modalClose">×</span>
+    <div class="type">${meta.label} · ${fmtDate(r.date)} · ${r.loc}</div>
+    <h3>${r.title}</h3>
+    <div class="sub">${r.sub||''}</div>
+    ${r.amt?`<div class="row"><span>Amount</span><span>${r.amt}</span></div>`:''}
+    <div class="row"><span>Tags</span><span>${r.tags.join(', ')}</span></div>
+    ${conns.length?`<div class="conn-title">Connected moments</div>${conns.map(c=>`<div class="conn-item" data-id="${c.id}">→ ${c.title} <span style="opacity:.5">(${fmtDate(c.date)})</span></div>`).join('')}`:''}
+  `;
+  $('#modalBg').classList.add('show');
+  $('#modalClose').addEventListener('click', closeModal);
+  $('#modalContent').querySelectorAll('.conn-item').forEach(el=>{
+    el.addEventListener('click',()=> openModal(parseInt(el.dataset.id)));
+  });
+}
+function closeModal(){ $('#modalBg').classList.remove('show'); }
+$('#modalBg').addEventListener('click', e=>{ if(e.target.id==='modalBg') closeModal(); });
+
+function attachCardClicks(containerSel){
+  document.querySelectorAll(containerSel+' .card').forEach(card=>{
+    card.addEventListener('click', ()=> openModal(parseInt(card.dataset.id)));
+  });
+}
+
+/* ---------- NAV ---------- */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    $('#view-'+tab.dataset.view).classList.add('active');
+  });
+});
+$('#searchInput').addEventListener('input', e=>{ state.search = e.target.value; renderExplore(); });
+
+/* ---------- CUSTOM CURSOR + BUBBLE TRAIL ---------- */
+(function(){
+  const glow = document.getElementById('cursorGlow');
+  const hasHover = window.matchMedia('(hover:hover)').matches;
+  if(!hasHover){ return; }
+  let mx=window.innerWidth/2, my=window.innerHeight/2, gx=mx, gy=my;
+  let lastSpawn = 0;
+  const palette = ['#F2A93B','#EC4899','#8B5CF6','#3B82F6','#14B8A6','#22C55E'];
+
+  window.addEventListener('mousemove', e=>{
+    mx = e.clientX; my = e.clientY;
+    glow.classList.add('show');
+    const now = performance.now();
+    if(now - lastSpawn > 45){
+      lastSpawn = now;
+      spawnBubble(mx, my);
+    }
+  });
+  window.addEventListener('mouseleave', ()=> glow.classList.remove('show'));
+
+  function spawnBubble(x,y){
+    const b = document.createElement('div');
+    const size = 6 + Math.random()*14;
+    const color = palette[Math.floor(Math.random()*palette.length)];
+    b.className = 'bubble-particle';
+    b.style.width = size+'px';
+    b.style.height = size+'px';
+    b.style.left = (x + (Math.random()*20-10))+'px';
+    b.style.top = (y + (Math.random()*20-10))+'px';
+    b.style.background = color;
+    b.style.boxShadow = `0 0 ${size}px ${color}88`;
+    b.style.animation = `floatFade ${0.6+Math.random()*0.5}s ease-out forwards`;
+    document.body.appendChild(b);
+    setTimeout(()=>b.remove(), 1200);
+  }
+
+  function raf(){
+    gx += (mx-gx)*0.18;
+    gy += (my-gy)*0.18;
+    glow.style.left = gx+'px';
+    glow.style.top = gy+'px';
+    requestAnimationFrame(raf);
+  }
+  raf();
+
+  // grow the glow slightly over interactive elements
+  document.querySelectorAll('a, button, .card, .chip, .tab, .graph-node').forEach(el=>{
+    el.addEventListener('mouseenter', ()=>{ glow.style.width='58px'; glow.style.height='58px'; });
+    el.addEventListener('mouseleave', ()=>{ glow.style.width='38px'; glow.style.height='38px'; });
+  });
+})();
+
+/* ---------- INIT ---------- */
+renderHeroStats();
+renderChips();
+renderExplore();
+renderChapters();
+renderGraph();
+renderInsights();
+</script>
+</body>
+</html>
